@@ -40,7 +40,7 @@ class CGenerator(Generator):
         if self.local_files:
             self.h_include = '"glad{}.h"'.format(suffix)
             self._f_c = open(make_path(self.path,
-                                        'glad{}.c'.format(suffix)), 'w')
+                                        'glad{}.cpp'.format(suffix)), 'w')
             self._f_h = open(make_path(self.path,
                                         'glad{}.h'.format(suffix)), 'w')
             khr = self.path
@@ -48,7 +48,7 @@ class CGenerator(Generator):
         else:
             self.h_include = '<glad/glad{}.h>'.format(suffix)
             self._f_c = open(make_path(self.path, 'src',
-                                        'glad{}.c'.format(suffix)), 'w')
+                                        'glad{}.cpp'.format(suffix)), 'w')
             self._f_h = open(make_path(self.path, 'include', 'glad',
                                         'glad{}.h'.format(suffix)), 'w')
             khr = os.path.join(self.path, 'include', 'KHR')
@@ -306,7 +306,7 @@ class CGenerator(Generator):
         for ext in extensions:
             for enum in ext.enums:
                 if not enum.name in written:
-                    f.write('#define {} {}\n'.format(enum.name, enum.value))
+                    f.write('constexpr GLenum {} = {};\n'.format(enum.name, enum.value))
                 written.add(enum.name)
 
     def write_api_header(self, f):
@@ -341,7 +341,23 @@ class CGenerator(Generator):
         )
         fobj.write('GLAPI PFN{}PROC glad_{};\n'.format(func.proto.name.upper(),
                                                        func.proto.name))
-        fobj.write('#define {0} glad_{0}\n'.format(func.proto.name))
+        # fobj.write('#define {0} glad_{0}\n'.format(func.proto.name))
+        rett = func.proto.ret.to_c()
+        if rett == 'void':
+            fobj.write('inline static void {}({}) {{ glad_{}({}); }}\n'.format(
+                func.proto.name,
+                ', '.join(param.type.raw for param in func.params) or 'void',
+                func.proto.name,
+                ', '.join(param.name for param in func.params)
+            ))
+        else:
+            fobj.write('inline static {} {}({}) {{ return glad_{}({}); }}\n'.format(
+                    func.proto.ret.to_c(),
+                    func.proto.name,
+                    ', '.join(param.type.raw for param in func.params) or 'void',
+                    func.proto.name,
+                    ', '.join(param.name for param in func.params)
+                ))
 
     def write_function(self, fobj, func):
         fobj.write('PFN{}PROC glad_{} = NULL;\n'.format(func.proto.name.upper(),
