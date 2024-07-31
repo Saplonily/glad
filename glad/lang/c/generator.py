@@ -286,7 +286,9 @@ class CGenerator(Generator):
             if ext.name in ('GLX_SGIX_video_source', 'GLX_SGIX_dmbuffer'): f.write('#endif\n')
 
     def write_functions(self, f, write, written, extensions):
+        f.write('enum : GLenum\n{\n')
         self.write_enums(f, written, extensions)
+        f.write('};\n')
 
         for ext in extensions:
             f.write('#ifndef {0}\n#define {0} 1\n'.format(ext.name))
@@ -306,7 +308,7 @@ class CGenerator(Generator):
         for ext in extensions:
             for enum in ext.enums:
                 if not enum.name in written:
-                    f.write('constexpr GLenum {} = {};\n'.format(enum.name, enum.value))
+                    f.write('\t{} = {},\n'.format(enum.name, enum.value))
                 written.add(enum.name)
 
     def write_api_header(self, f):
